@@ -23,7 +23,10 @@ function Stat({
       <div className="text-[11px] text-neutral-400 leading-tight truncate">
         {labelZh}
       </div>
-      <div className="text-[9px] uppercase tracking-wider text-neutral-600 leading-tight truncate mt-0.5">
+      <div
+        className="text-[9px] uppercase tracking-wider text-neutral-600 leading-tight mt-0.5 line-clamp-2 break-words min-h-[1.7em]"
+        title={labelEn}
+      >
         {labelEn}
       </div>
       <div className="mt-2 flex items-baseline gap-1">
@@ -61,7 +64,10 @@ function Progress({
           <div className="text-[11px] text-neutral-400 leading-tight truncate">
             {labelZh}
           </div>
-          <div className="text-[9px] uppercase tracking-wider text-neutral-600 leading-tight truncate mt-0.5">
+          <div
+            className="text-[9px] uppercase tracking-wider text-neutral-600 leading-tight mt-0.5 line-clamp-2 break-words"
+            title={labelEn}
+          >
             {labelEn}
           </div>
         </div>
@@ -117,19 +123,19 @@ export default function TrackerPanel({ stats, trackCount, previewCount }: Props)
       <div className="flex gap-2">
         <Stat
           labelZh="已骑天数"
-          labelEn="Days ridden"
+          labelEn="Total Days"
           value={String(days)}
           unit="天 / d"
         />
         <Stat
           labelZh="日均里程"
-          labelEn="Avg km/day"
+          labelEn="Daily Avg Distance"
           value={avgDistanceKm.toFixed(1)}
           unit="km"
         />
         <Stat
           labelZh="日均爬升"
-          labelEn="Avg ascent/day"
+          labelEn="Daily Avg Climb"
           value={Math.round(avgElevM).toString()}
           unit="m"
         />
@@ -146,7 +152,7 @@ export default function TrackerPanel({ stats, trackCount, previewCount }: Props)
       />
       <Progress
         labelZh="爬升进度"
-        labelEn="Ascent progress"
+        labelEn="Climb progress"
         current={stats.elevGainM}
         target={TARGET_ELEV_GAIN_M}
         unit="m"
