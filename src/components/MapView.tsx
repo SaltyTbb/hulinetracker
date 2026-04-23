@@ -5,7 +5,6 @@ import {
   COLOR_DASH,
   COLOR_PREVIEW,
   COLOR_TRACK,
-  COLOR_TRACK_GLOW,
   HEIHE,
   TENGCHONG,
 } from "../lib/constants";
@@ -123,25 +122,6 @@ export default function MapView({ tracks, previewTracks }: Props) {
         data: { type: "FeatureCollection", features: [] },
       });
       map.addLayer({
-        id: "tracks-glow",
-        type: "line",
-        source: "tracks",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": COLOR_TRACK_GLOW,
-          "line-width": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            3, 9,
-            7, 11,
-            12, 14,
-          ],
-          "line-opacity": 0.28,
-          "line-blur": 3,
-        },
-      });
-      map.addLayer({
         id: "tracks-line",
         type: "line",
         source: "tracks",
@@ -230,25 +210,6 @@ export default function MapView({ tracks, previewTracks }: Props) {
           "circle-stroke-opacity": 0.9,
         },
       });
-      map.addLayer({
-        id: "endpoints-label",
-        type: "symbol",
-        source: "endpoints",
-        layout: {
-          "text-field": ["get", "label"],
-          "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
-          "text-offset": [0, 1.4],
-          "text-size": 13,
-          "text-anchor": "top",
-          "text-allow-overlap": true,
-        },
-        paint: {
-          "text-color": COLOR_TRACK,
-          "text-halo-color": "#000",
-          "text-halo-width": 1.5,
-        },
-      });
-
       loadedRef.current = true;
       applyData();
     });
@@ -266,10 +227,27 @@ export default function MapView({ tracks, previewTracks }: Props) {
 
   const applyData = () => {
     const map = mapRef.current;
-    if (!map || !loadedRef.current) return;
+    if (!map || !loadedRef.current) {
+      console.log("[hulinetracker] applyData skipped:", {
+        hasMap: !!map,
+        loaded: loadedRef.current,
+      });
+      return;
+    }
+
+    const fc = tracksToFC(tracks);
+    const totalPts = tracks.reduce(
+      (n, t) => n + t.segments.reduce((m, s) => m + s.length, 0),
+      0
+    );
+    console.log("[hulinetracker] applyData:", {
+      tracks: tracks.length,
+      points: totalPts,
+      features: fc.features.length,
+    });
 
     const tracksSrc = map.getSource("tracks") as maplibregl.GeoJSONSource | undefined;
-    tracksSrc?.setData(tracksToFC(tracks));
+    tracksSrc?.setData(fc);
 
     const previewSrc = map.getSource("preview") as maplibregl.GeoJSONSource | undefined;
     previewSrc?.setData(tracksToFC(previewTracks));
@@ -282,6 +260,7 @@ export default function MapView({ tracks, previewTracks }: Props) {
       : { top: 60, bottom: 60, left: 40, right: 40 };
 
     if (trackBounds && !fittedTracksRef.current) {
+      console.log("[hulinetracker] fit to tracks:", trackBounds, padding);
       map.fitBounds(trackBounds, {
         padding,
         duration: 800,

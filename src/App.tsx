@@ -40,8 +40,19 @@ export default function App() {
   useEffect(() => {
     (async () => {
       const files = await loadManifest();
+      console.log("[hulinetracker] manifest:", files);
       const parsed = (await Promise.all(files.map(loadGpx))).filter(
         (t): t is ParsedTrack => t !== null
+      );
+      console.log(
+        "[hulinetracker] parsed tracks:",
+        parsed.map((t) => ({
+          id: t.id,
+          name: t.name,
+          segments: t.segments.length,
+          points: t.segments.reduce((n, s) => n + s.length, 0),
+          metadataTime: t.metadataTime?.toISOString(),
+        }))
       );
       setTracks(parsed);
       setLoading(false);

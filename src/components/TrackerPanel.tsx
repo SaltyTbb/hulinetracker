@@ -8,20 +8,25 @@ type Props = {
 };
 
 function Stat({
-  label,
+  labelZh,
+  labelEn,
   value,
   unit,
 }: {
-  label: string;
+  labelZh: string;
+  labelEn: string;
   value: string;
   unit?: string;
 }) {
   return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-3 flex-1">
-      <div className="text-[11px] uppercase tracking-wider text-neutral-500">
-        {label}
+    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-3 flex-1 min-w-0">
+      <div className="text-[11px] text-neutral-400 leading-tight truncate">
+        {labelZh}
       </div>
-      <div className="mt-1 flex items-baseline gap-1">
+      <div className="text-[9px] uppercase tracking-wider text-neutral-600 leading-tight truncate mt-0.5">
+        {labelEn}
+      </div>
+      <div className="mt-2 flex items-baseline gap-1">
         <span className="text-xl font-bold text-brand-yellow tabular-nums">
           {value}
         </span>
@@ -32,30 +37,39 @@ function Stat({
 }
 
 function Progress({
-  label,
+  labelZh,
+  labelEn,
   current,
   target,
   unit,
   format,
+  remainingLabel,
 }: {
-  label: string;
+  labelZh: string;
+  labelEn: string;
   current: number;
   target: number;
   unit: string;
   format: (n: number) => string;
+  remainingLabel: { zh: string; en: string };
 }) {
-  const pct = Math.min(100, (current / target) * 100);
+  const pct = Math.min(100, target > 0 ? (current / target) * 100 : 0);
   return (
     <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-3">
-      <div className="flex items-baseline justify-between">
-        <div className="text-[11px] uppercase tracking-wider text-neutral-500">
-          {label}
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[11px] text-neutral-400 leading-tight truncate">
+            {labelZh}
+          </div>
+          <div className="text-[9px] uppercase tracking-wider text-neutral-600 leading-tight truncate mt-0.5">
+            {labelEn}
+          </div>
         </div>
-        <div className="text-xs text-neutral-400 tabular-nums">
+        <div className="text-xs text-neutral-400 tabular-nums shrink-0">
           {pct.toFixed(1)}%
         </div>
       </div>
-      <div className="mt-2 h-2 w-full bg-black border border-neutral-800 rounded-full overflow-hidden">
+      <div className="mt-2.5 h-2 w-full bg-black border border-neutral-800 rounded-full overflow-hidden">
         <div
           className="h-full bg-brand-yellow rounded-full transition-[width] duration-500 ease-out"
           style={{ width: `${pct}%` }}
@@ -68,7 +82,9 @@ function Progress({
           </span>{" "}
           / {format(target)} {unit}
         </span>
-        <span>还剩 {format(Math.max(0, target - current))} {unit}</span>
+        <span title={remainingLabel.en}>
+          {remainingLabel.zh} {format(Math.max(0, target - current))} {unit}
+        </span>
       </div>
     </div>
   );
@@ -82,46 +98,60 @@ export default function TrackerPanel({ stats, trackCount, previewCount }: Props)
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-2 flex-wrap">
           <h1 className="text-lg font-bold text-brand-yellow tracking-tight">
-            云南 → 东北 · 骑行
+            纵穿胡焕庸线
           </h1>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+            Across the Hu Line
+          </span>
         </div>
         <p className="mt-1 text-xs text-neutral-500">
-          腾冲 · 黑河  ·  已加载 {trackCount} 条轨迹
+          腾冲 → 黑河 · {trackCount} tracks
           {previewCount > 0 && (
-            <span className="text-orange-400">（+{previewCount} 条预览）</span>
+            <span className="text-orange-400"> · +{previewCount} preview</span>
           )}
         </p>
       </div>
 
       <div className="flex gap-2">
-        <Stat label="已骑天数" value={String(days)} unit="天" />
         <Stat
-          label="日均里程"
+          labelZh="已骑天数"
+          labelEn="Days ridden"
+          value={String(days)}
+          unit="天 / d"
+        />
+        <Stat
+          labelZh="日均里程"
+          labelEn="Avg km/day"
           value={avgDistanceKm.toFixed(1)}
           unit="km"
         />
         <Stat
-          label="日均爬升"
+          labelZh="日均爬升"
+          labelEn="Avg ascent/day"
           value={Math.round(avgElevM).toString()}
           unit="m"
         />
       </div>
 
       <Progress
-        label="距离进度"
+        labelZh="距离进度"
+        labelEn="Distance progress"
         current={stats.distanceKm}
         target={TARGET_DISTANCE_KM}
         unit="km"
         format={(n) => n.toFixed(1)}
+        remainingLabel={{ zh: "剩", en: "left" }}
       />
       <Progress
-        label="爬升进度"
+        labelZh="爬升进度"
+        labelEn="Ascent progress"
         current={stats.elevGainM}
         target={TARGET_ELEV_GAIN_M}
         unit="m"
         format={(n) => Math.round(n).toLocaleString()}
+        remainingLabel={{ zh: "剩", en: "left" }}
       />
     </div>
   );

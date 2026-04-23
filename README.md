@@ -1,6 +1,8 @@
 # hulinetracker
 
-云南 → 东北 骑行地图。响应式 Web App，部署在 GitHub Pages。
+纵穿胡焕庸线 · 骑行地图。响应式 Web App，部署在 GitHub Pages。
+
+纯 vibe coding, 哈哈
 
 地图展示已骑 GPX 轨迹 + 腾冲↔黑河起终点虚线，侧边 Tracker 面板显示：
 

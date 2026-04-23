@@ -11,6 +11,7 @@ export type ParsedTrack = {
   id: string;
   name: string;
   segments: TrkSegment[];
+  metadataTime?: Date;
 };
 
 export type TrackStats = {
@@ -19,51 +20,82 @@ export type TrackStats = {
   dateKeys: Set<string>;
 };
 
+function elementsByLocalName(root: Element | Document, localName: string): Element[] {
+  const ns = root.getElementsByTagNameNS("*", localName);
+  if (ns.length > 0) return Array.from(ns);
+  return Array.from(root.getElementsByTagName(localName));
+}
+
+function firstChildText(parent: Element, localName: string): string | undefined {
+  for (const c of elementsByLocalName(parent, localName)) {
+    if (c.parentNode === parent) return c.textContent?.trim() || undefined;
+  }
+  return undefined;
+}
+
+function firstByLocalName(root: Element | Document, localName: string): Element | undefined {
+  return elementsByLocalName(root, localName)[0];
+}
+
+function parseDate(s: string | undefined): Date | undefined {
+  if (!s) return undefined;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
 export function parseGpx(xmlText: string, id: string): ParsedTrack {
   const doc = new DOMParser().parseFromString(xmlText, "application/xml");
-  const parseErr = doc.querySelector("parsererror");
+  const parseErr = doc.getElementsByTagName("parsererror")[0];
   if (parseErr) {
     throw new Error(`GPX parse error in ${id}: ${parseErr.textContent}`);
   }
 
-  const nameEl = doc.querySelector("trk > name, metadata > name");
-  const name = nameEl?.textContent?.trim() || id.replace(/\.gpx$/i, "");
+  const trkEl = firstByLocalName(doc, "trk");
+  const metadataEl = firstByLocalName(doc, "metadata");
+  const nameFromTrk = trkEl ? firstChildText(trkEl, "name") : undefined;
+  const nameFromMeta = metadataEl ? firstChildText(metadataEl, "name") : undefined;
+  const name = nameFromTrk || nameFromMeta || id.replace(/\.gpx$/i, "");
+
+  const metadataTime = metadataEl
+    ? parseDate(firstChildText(metadataEl, "time"))
+    : undefined;
 
   const segments: TrkSegment[] = [];
-  const segEls = doc.querySelectorAll("trkseg");
-  segEls.forEach((segEl) => {
+  for (const segEl of elementsByLocalName(doc, "trkseg")) {
     const pts: TrkPoint[] = [];
-    segEl.querySelectorAll("trkpt").forEach((ptEl) => {
+    for (const ptEl of elementsByLocalName(segEl, "trkpt")) {
       const lat = parseFloat(ptEl.getAttribute("lat") || "");
       const lon = parseFloat(ptEl.getAttribute("lon") || "");
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-      const eleText = ptEl.querySelector("ele")?.textContent;
-      const timeText = ptEl.querySelector("time")?.textContent;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+      const eleText = firstChildText(ptEl, "ele");
+      const timeText = firstChildText(ptEl, "time");
       const ele = eleText ? parseFloat(eleText) : undefined;
-      const time = timeText ? new Date(timeText) : undefined;
       pts.push({
         lat,
         lon,
-        ele: Number.isFinite(ele) ? ele : undefined,
-        time: time && !isNaN(time.getTime()) ? time : undefined,
+        ele: ele !== undefined && Number.isFinite(ele) ? ele : undefined,
+        time: parseDate(timeText),
       });
-    });
+    }
     if (pts.length > 0) segments.push(pts);
-  });
+  }
 
   if (segments.length === 0) {
     const pts: TrkPoint[] = [];
-    doc.querySelectorAll("rtept, wpt").forEach((ptEl) => {
+    for (const ptEl of [
+      ...elementsByLocalName(doc, "rtept"),
+      ...elementsByLocalName(doc, "wpt"),
+    ]) {
       const lat = parseFloat(ptEl.getAttribute("lat") || "");
       const lon = parseFloat(ptEl.getAttribute("lon") || "");
       if (Number.isFinite(lat) && Number.isFinite(lon)) {
         pts.push({ lat, lon });
       }
-    });
+    }
     if (pts.length > 0) segments.push(pts);
   }
 
-  return { id, name, segments };
+  return { id, name, segments, metadataTime };
 }
 
 const R = 6371008.8;
@@ -111,6 +143,9 @@ export function computeStatsForTracks(tracks: ParsedTrack[]): TrackStats {
   const dateKeys = new Set<string>();
 
   for (const track of tracks) {
+    if (track.metadataTime) {
+      dateKeys.add(dateKey(track.metadataTime));
+    }
     for (const seg of track.segments) {
       for (let i = 1; i < seg.length; i++) {
         distanceM += haversine(seg[i - 1], seg[i]);
