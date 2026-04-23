@@ -106,9 +106,15 @@ export default function MapView({ tracks, previewTracks }: Props) {
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": COLOR_DASH,
-          "line-width": 1.6,
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            3, 1.4,
+            10, 2.2,
+          ],
           "line-dasharray": [2, 3],
-          "line-opacity": 0.75,
+          "line-opacity": 0.7,
         },
       });
 
@@ -123,9 +129,16 @@ export default function MapView({ tracks, previewTracks }: Props) {
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": COLOR_TRACK_GLOW,
-          "line-width": 7,
-          "line-opacity": 0.25,
-          "line-blur": 2,
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            3, 9,
+            7, 11,
+            12, 14,
+          ],
+          "line-opacity": 0.28,
+          "line-blur": 3,
         },
       });
       map.addLayer({
@@ -135,7 +148,15 @@ export default function MapView({ tracks, previewTracks }: Props) {
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": COLOR_TRACK,
-          "line-width": 3,
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            3, 3.5,
+            7, 4,
+            12, 3.5,
+          ],
+          "line-opacity": 1,
         },
       });
 
@@ -150,7 +171,14 @@ export default function MapView({ tracks, previewTracks }: Props) {
         layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": COLOR_PREVIEW,
-          "line-width": 3,
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            3, 3,
+            7, 3.5,
+            12, 3,
+          ],
           "line-dasharray": [1, 1.2],
         },
       });
@@ -247,18 +275,18 @@ export default function MapView({ tracks, previewTracks }: Props) {
     previewSrc?.setData(tracksToFC(previewTracks));
 
     const trackBounds = tracksBounds([...tracks, ...previewTracks]);
+    const isDesktop =
+      typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
+    const padding = isDesktop
+      ? { top: 60, bottom: 60, left: 60, right: 400 }
+      : { top: 60, bottom: 60, left: 40, right: 40 };
+
     if (trackBounds && !fittedTracksRef.current) {
-      const minLon = Math.min(trackBounds[0][0], TENGCHONG[0], HEIHE[0]);
-      const minLat = Math.min(trackBounds[0][1], TENGCHONG[1], HEIHE[1]);
-      const maxLon = Math.max(trackBounds[1][0], TENGCHONG[0], HEIHE[0]);
-      const maxLat = Math.max(trackBounds[1][1], TENGCHONG[1], HEIHE[1]);
-      map.fitBounds(
-        [
-          [minLon, minLat],
-          [maxLon, maxLat],
-        ],
-        { padding: 70, duration: 800, maxZoom: 7 }
-      );
+      map.fitBounds(trackBounds, {
+        padding,
+        duration: 800,
+        maxZoom: 11,
+      });
       fittedTracksRef.current = true;
       fittedFallbackRef.current = true;
     } else if (!trackBounds && !fittedFallbackRef.current) {
@@ -267,7 +295,7 @@ export default function MapView({ tracks, previewTracks }: Props) {
           [TENGCHONG[0] - 2, TENGCHONG[1] - 2],
           [HEIHE[0] + 2, HEIHE[1] + 2],
         ],
-        { padding: 60, duration: 600 }
+        { padding, duration: 600 }
       );
       fittedFallbackRef.current = true;
     }
