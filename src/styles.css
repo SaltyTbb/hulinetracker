@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: #000;
+}
+
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib a {
+  background: rgba(0, 0, 0, 0.55) !important;
+  color: #a3a3a3 !important;
+}
+
+.maplibregl-ctrl-group {
+  background: #0a0a0a !important;
+  border: 1px solid #262626 !important;
+}
+
+.maplibregl-ctrl-group button {
+  filter: invert(0.9) hue-rotate(180deg);
+}

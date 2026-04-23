@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="hulinetracker-sample" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Day 01 · 腾冲 → 保山（示例）</name>
+  </metadata>
+  <trk>
+    <name>Day 01 · 腾冲 → 保山</name>
+    <trkseg>
+      <trkpt lat="25.0203" lon="98.4937"><ele>1640</ele><time>2026-04-01T08:00:00Z</time></trkpt>
+      <trkpt lat="25.0310" lon="98.5500"><ele>1700</ele><time>2026-04-01T08:30:00Z</time></trkpt>
+      <trkpt lat="25.0500" lon="98.6300"><ele>1820</ele><time>2026-04-01T09:15:00Z</time></trkpt>
+      <trkpt lat="25.0700" lon="98.7200"><ele>1780</ele><time>2026-04-01T10:00:00Z</time></trkpt>
+      <trkpt lat="25.0900" lon="98.8200"><ele>1900</ele><time>2026-04-01T10:45:00Z</time></trkpt>
+      <trkpt lat="25.1050" lon="98.9100"><ele>1850</ele><time>2026-04-01T11:30:00Z</time></trkpt>
+      <trkpt lat="25.1100" lon="99.0000"><ele>1750</ele><time>2026-04-01T12:15:00Z</time></trkpt>
+      <trkpt lat="25.1150" lon="99.1000"><ele>1680</ele><time>2026-04-01T13:00:00Z</time></trkpt>
+      <trkpt lat="25.1200" lon="99.1617"><ele>1653</ele><time>2026-04-01T13:45:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

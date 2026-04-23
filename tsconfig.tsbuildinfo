@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/mapview.tsx","./src/components/trackerpanel.tsx","./src/components/uploaddrawer.tsx","./src/lib/constants.ts","./src/lib/gpx.ts"],"version":"5.9.3"}
