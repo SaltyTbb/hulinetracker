@@ -112,23 +112,28 @@ function haversine(a: TrkPoint, b: TrkPoint): number {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-function smooth(values: number[], window: number): number[] {
-  if (values.length === 0) return values;
-  const half = Math.floor(window / 2);
-  const out = new Array(values.length);
-  for (let i = 0; i < values.length; i++) {
-    let sum = 0;
-    let count = 0;
-    for (let j = Math.max(0, i - half); j <= Math.min(values.length - 1, i + half); j++) {
-      sum += values[j];
-      count++;
-    }
-    out[i] = sum / count;
-  }
-  return out;
-}
+const ELEV_GAIN_THRESHOLD_M = 3;
 
-const ELEV_THRESHOLD_M = 1;
+function segmentElevGain(seg: TrkSegment): number {
+  let gain = 0;
+  let anchor: number | undefined;
+  for (const p of seg) {
+    const ele = p.ele;
+    if (typeof ele !== "number" || !Number.isFinite(ele)) continue;
+    if (anchor === undefined) {
+      anchor = ele;
+      continue;
+    }
+    const delta = ele - anchor;
+    if (delta >= ELEV_GAIN_THRESHOLD_M) {
+      gain += delta;
+      anchor = ele;
+    } else if (ele < anchor) {
+      anchor = ele;
+    }
+  }
+  return gain;
+}
 
 function dateKey(d: Date): string {
   const y = d.getFullYear();
@@ -150,14 +155,7 @@ export function computeStatsForTracks(tracks: ParsedTrack[]): TrackStats {
       for (let i = 1; i < seg.length; i++) {
         distanceM += haversine(seg[i - 1], seg[i]);
       }
-      const eles = seg.map((p) => p.ele).filter((v): v is number => typeof v === "number");
-      if (eles.length >= 2) {
-        const sm = smooth(eles, 5);
-        for (let i = 1; i < sm.length; i++) {
-          const delta = sm[i] - sm[i - 1];
-          if (delta > ELEV_THRESHOLD_M) elevGainM += delta;
-        }
-      }
+      elevGainM += segmentElevGain(seg);
       for (const p of seg) {
         if (p.time) dateKeys.add(dateKey(p.time));
       }
