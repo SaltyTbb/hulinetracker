@@ -5,3 +5,4 @@ dist
 .vite
 tsconfig.tsbuildinfo
 public/gpx/index.json
+public/tracks/bundle.json

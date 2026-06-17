@@ -2,9 +2,38 @@ import { useEffect, useMemo, useState } from "react";
 import MapView from "./components/MapView";
 import TrackerPanel from "./components/TrackerPanel";
 import UploadDrawer from "./components/UploadDrawer";
-import { ParsedTrack, computeStatsForTracks, parseGpx } from "./lib/gpx";
+import {
+  ParsedTrack,
+  TrackStats,
+  bundleStatsToTrackStats,
+  bundledTrackToParsedTrack,
+  computeStatsForTracks,
+  parseGpx,
+} from "./lib/gpx";
 
 type Manifest = { files: string[] };
+
+type BundleLoadResult = {
+  tracks: ParsedTrack[];
+  stats: TrackStats;
+};
+
+async function loadTrackBundle(): Promise<BundleLoadResult | null> {
+  try {
+    const url = `${import.meta.env.BASE_URL}tracks/bundle.json`;
+    const res = await fetch(url, { cache: "no-cache" });
+    if (!res.ok) return null;
+    const bundle = await res.json();
+    if (bundle?.version !== 1 || !Array.isArray(bundle.tracks)) return null;
+    return {
+      tracks: bundle.tracks.map(bundledTrackToParsedTrack),
+      stats: bundleStatsToTrackStats(bundle),
+    };
+  } catch (err) {
+    console.error("Failed to load track bundle", err);
+    return null;
+  }
+}
 
 async function loadManifest(): Promise<string[]> {
   try {
@@ -33,17 +62,28 @@ async function loadGpx(filename: string): Promise<ParsedTrack | null> {
 
 export default function App() {
   const [tracks, setTracks] = useState<ParsedTrack[]>([]);
+  const [baseStats, setBaseStats] = useState<TrackStats | null>(null);
   const [previewTracks, setPreviewTracks] = useState<ParsedTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
+      const bundle = await loadTrackBundle();
+      if (bundle) {
+        console.log("[hulinetracker] loaded bundle:", {
+          tracks: bundle.tracks.length,
+          points: bundle.tracks.reduce((n, t) => n + t.segments.reduce((m, s) => m + s.length, 0), 0),
+        });
+        setTracks(bundle.tracks);
+        setBaseStats(bundle.stats);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback keeps local dev usable if the generated bundle is missing.
       const files = await loadManifest();
-      console.log("[hulinetracker] manifest:", files);
-      const parsed = (await Promise.all(files.map(loadGpx))).filter(
-        (t): t is ParsedTrack => t !== null
-      );
+      const parsed = (await Promise.all(files.map(loadGpx))).filter((t): t is ParsedTrack => t !== null);
       console.log(
         "[hulinetracker] parsed tracks:",
         parsed.map((t) => ({
@@ -55,14 +95,21 @@ export default function App() {
         }))
       );
       setTracks(parsed);
+      setBaseStats(computeStatsForTracks(parsed));
       setLoading(false);
     })();
   }, []);
 
-  const combinedStats = useMemo(
-    () => computeStatsForTracks([...tracks, ...previewTracks]),
-    [tracks, previewTracks]
-  );
+  const combinedStats = useMemo(() => {
+    const base = baseStats ?? computeStatsForTracks(tracks);
+    if (previewTracks.length === 0) return base;
+    const preview = computeStatsForTracks(previewTracks);
+    return {
+      distanceKm: base.distanceKm + preview.distanceKm,
+      elevGainM: base.elevGainM + preview.elevGainM,
+      dateKeys: new Set([...base.dateKeys, ...preview.dateKeys]),
+    };
+  }, [baseStats, tracks, previewTracks]);
 
   const addPreview = (newTracks: ParsedTrack[]) =>
     setPreviewTracks((prev) => [...prev, ...newTracks]);

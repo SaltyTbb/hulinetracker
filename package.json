@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/build-manifest.mjs && vite",
+    "test": "node --test scripts/*.test.mjs",
     "build": "node scripts/build-manifest.mjs && tsc -b && vite build",
     "preview": "vite preview"
   },

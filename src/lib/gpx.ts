@@ -20,6 +20,31 @@ export type TrackStats = {
   dateKeys: Set<string>;
 };
 
+export type BundledTrack = {
+  id: string;
+  name: string;
+  metadataTime?: string;
+  segments: [number, number][][];
+  distanceKm: number;
+  elevGainM: number;
+  dateKeys: string[];
+  originalPointCount: number;
+  pointCount: number;
+};
+
+export type TrackBundle = {
+  version: 1;
+  generatedAt: string;
+  stats: {
+    distanceKm: number;
+    elevGainM: number;
+    dateKeys: string[];
+    originalPointCount: number;
+    pointCount: number;
+  };
+  tracks: BundledTrack[];
+};
+
 function elementsByLocalName(root: Element | Document, localName: string): Element[] {
   const ns = root.getElementsByTagNameNS("*", localName);
   if (ns.length > 0) return Array.from(ns);
@@ -96,6 +121,28 @@ export function parseGpx(xmlText: string, id: string): ParsedTrack {
   }
 
   return { id, name, segments, metadataTime };
+}
+
+export function bundledTrackToParsedTrack(track: BundledTrack): ParsedTrack {
+  return {
+    id: track.id,
+    name: track.name,
+    metadataTime: parseDate(track.metadataTime),
+    segments: track.segments.map((seg) =>
+      seg.map(([lon, lat]) => ({
+        lon,
+        lat,
+      }))
+    ),
+  };
+}
+
+export function bundleStatsToTrackStats(bundle: TrackBundle): TrackStats {
+  return {
+    distanceKm: bundle.stats.distanceKm,
+    elevGainM: bundle.stats.elevGainM,
+    dateKeys: new Set(bundle.stats.dateKeys),
+  };
 }
 
 const R = 6371008.8;
