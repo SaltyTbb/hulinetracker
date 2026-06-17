@@ -101,7 +101,7 @@ export default function MapView({ tracks, previewTracks }: Props) {
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
 
-    map.on("load", () => {
+    map.on("style.load", () => {
       map.addSource("dashed", { type: "geojson", data: dashedFC() });
       map.addLayer({
         id: "dashed-line",
