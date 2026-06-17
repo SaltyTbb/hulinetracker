@@ -81,9 +81,14 @@ function endpointsFC(): FeatureCollection {
 export default function MapView({ tracks, previewTracks }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MLMap | null>(null);
+  const tracksRef = useRef<ParsedTrack[]>([]);
+  const previewTracksRef = useRef<ParsedTrack[]>([]);
   const loadedRef = useRef(false);
   const fittedFallbackRef = useRef(false);
   const fittedTracksRef = useRef(false);
+
+  tracksRef.current = tracks;
+  previewTracksRef.current = previewTracks;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -235,13 +240,15 @@ export default function MapView({ tracks, previewTracks }: Props) {
       return;
     }
 
-    const fc = tracksToFC(tracks);
-    const totalPts = tracks.reduce(
+    const currentTracks = tracksRef.current;
+    const currentPreviewTracks = previewTracksRef.current;
+    const fc = tracksToFC(currentTracks);
+    const totalPts = currentTracks.reduce(
       (n, t) => n + t.segments.reduce((m, s) => m + s.length, 0),
       0
     );
     console.log("[hulinetracker] applyData:", {
-      tracks: tracks.length,
+      tracks: currentTracks.length,
       points: totalPts,
       features: fc.features.length,
     });
@@ -250,9 +257,9 @@ export default function MapView({ tracks, previewTracks }: Props) {
     tracksSrc?.setData(fc);
 
     const previewSrc = map.getSource("preview") as maplibregl.GeoJSONSource | undefined;
-    previewSrc?.setData(tracksToFC(previewTracks));
+    previewSrc?.setData(tracksToFC(currentPreviewTracks));
 
-    const trackBounds = tracksBounds([...tracks, ...previewTracks]);
+    const trackBounds = tracksBounds([...currentTracks, ...currentPreviewTracks]);
     const isDesktop =
       typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
     const padding = isDesktop
