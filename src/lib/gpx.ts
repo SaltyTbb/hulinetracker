@@ -12,12 +12,14 @@ export type ParsedTrack = {
   name: string;
   segments: TrkSegment[];
   metadataTime?: Date;
+  dateKeys?: string[];
 };
 
 export type TrackStats = {
   distanceKm: number;
   elevGainM: number;
   dateKeys: Set<string>;
+  trackDays: number;
 };
 
 export type BundledTrack = {
@@ -39,6 +41,7 @@ export type TrackBundle = {
     distanceKm: number;
     elevGainM: number;
     dateKeys: string[];
+    trackDays?: number;
     originalPointCount: number;
     pointCount: number;
   };
@@ -128,6 +131,7 @@ export function bundledTrackToParsedTrack(track: BundledTrack): ParsedTrack {
     id: track.id,
     name: track.name,
     metadataTime: parseDate(track.metadataTime),
+    dateKeys: track.dateKeys,
     segments: track.segments.map((seg) =>
       seg.map(([lon, lat]) => ({
         lon,
@@ -142,6 +146,7 @@ export function bundleStatsToTrackStats(bundle: TrackBundle): TrackStats {
     distanceKm: bundle.stats.distanceKm,
     elevGainM: bundle.stats.elevGainM,
     dateKeys: new Set(bundle.stats.dateKeys),
+    trackDays: bundle.stats.trackDays ?? bundle.tracks.length,
   };
 }
 
@@ -213,13 +218,18 @@ export function computeStatsForTracks(tracks: ParsedTrack[]): TrackStats {
     distanceKm: distanceM / 1000,
     elevGainM,
     dateKeys,
+    trackDays: tracks.length,
   };
 }
 
 export function trackToGeoJSON(track: ParsedTrack): GeoJSON.Feature<GeoJSON.MultiLineString> {
   return {
     type: "Feature",
-    properties: { id: track.id, name: track.name },
+    properties: {
+      id: track.id,
+      name: track.name,
+      dateKeys: trackDateKeys(track),
+    },
     geometry: {
       type: "MultiLineString",
       coordinates: track.segments.map((seg) => seg.map((p) => [p.lon, p.lat])),
@@ -249,4 +259,17 @@ export function tracksBounds(tracks: ParsedTrack[]): [[number, number], [number,
     [minLon, minLat],
     [maxLon, maxLat],
   ];
+}
+
+export function trackDateKeys(track: ParsedTrack): string[] {
+  if (track.dateKeys?.length) return track.dateKeys;
+
+  const keys = new Set<string>();
+  if (track.metadataTime) keys.add(dateKey(track.metadataTime));
+  for (const segment of track.segments) {
+    for (const point of segment) {
+      if (point.time) keys.add(dateKey(point.time));
+    }
+  }
+  return [...keys].sort();
 }

@@ -233,6 +233,7 @@ export function buildTrackBundle(tracks) {
       distanceKm,
       elevGainM,
       dateKeys: [...dateKeys].sort(),
+      trackDays: tracks.length,
       originalPointCount,
       pointCount,
     },

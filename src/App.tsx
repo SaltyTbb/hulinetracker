@@ -66,6 +66,8 @@ export default function App() {
   const [previewTracks, setPreviewTracks] = useState<ParsedTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [hoverDate, setHoverDate] = useState<string | null>(null);
+  const [lockedDate, setLockedDate] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -108,6 +110,7 @@ export default function App() {
       distanceKm: base.distanceKm + preview.distanceKm,
       elevGainM: base.elevGainM + preview.elevGainM,
       dateKeys: new Set([...base.dateKeys, ...preview.dateKeys]),
+      trackDays: base.trackDays + preview.trackDays,
     };
   }, [baseStats, tracks, previewTracks]);
 
@@ -116,10 +119,15 @@ export default function App() {
   const removePreview = (id: string) =>
     setPreviewTracks((prev) => prev.filter((t) => t.id !== id));
   const clearPreview = () => setPreviewTracks([]);
+  const activeDate = hoverDate ?? lockedDate;
 
   return (
     <div className="relative h-full w-full bg-black text-neutral-100 font-sans">
-      <MapView tracks={tracks} previewTracks={previewTracks} />
+      <MapView
+        tracks={tracks}
+        previewTracks={previewTracks}
+        activeDate={activeDate}
+      />
 
       {loading && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-full bg-neutral-900/80 border border-neutral-800 text-xs text-neutral-400 backdrop-blur">
@@ -132,6 +140,13 @@ export default function App() {
           stats={combinedStats}
           trackCount={tracks.length}
           previewCount={previewTracks.length}
+          tracks={[...tracks, ...previewTracks]}
+          activeDate={activeDate}
+          lockedDate={lockedDate}
+          onHoverDateChange={setHoverDate}
+          onLockedDateToggle={(date) =>
+            setLockedDate((current) => (current === date ? null : date))
+          }
         />
         <UploadDrawer
           previewTracks={previewTracks}
@@ -176,6 +191,13 @@ export default function App() {
                   stats={combinedStats}
                   trackCount={tracks.length}
                   previewCount={previewTracks.length}
+                  tracks={[...tracks, ...previewTracks]}
+                  activeDate={activeDate}
+                  lockedDate={lockedDate}
+                  onHoverDateChange={setHoverDate}
+                  onLockedDateToggle={(date) =>
+                    setLockedDate((current) => (current === date ? null : date))
+                  }
                 />
                 <UploadDrawer
                   previewTracks={previewTracks}

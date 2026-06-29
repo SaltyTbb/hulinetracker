@@ -8,11 +8,12 @@ import {
   HEIHE,
   TENGCHONG,
 } from "../lib/constants";
-import { ParsedTrack, trackToGeoJSON, tracksBounds } from "../lib/gpx";
+import { ParsedTrack, trackDateKeys, trackToGeoJSON, tracksBounds } from "../lib/gpx";
 
 type Props = {
   tracks: ParsedTrack[];
   previewTracks: ParsedTrack[];
+  activeDate: string | null;
 };
 
 const DARK_STYLE: StyleSpecification = {
@@ -78,17 +79,19 @@ function endpointsFC(): FeatureCollection {
   };
 }
 
-export default function MapView({ tracks, previewTracks }: Props) {
+export default function MapView({ tracks, previewTracks, activeDate }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MLMap | null>(null);
   const tracksRef = useRef<ParsedTrack[]>([]);
   const previewTracksRef = useRef<ParsedTrack[]>([]);
+  const activeDateRef = useRef<string | null>(null);
   const loadedRef = useRef(false);
   const fittedFallbackRef = useRef(false);
   const fittedTracksRef = useRef(false);
 
   tracksRef.current = tracks;
   previewTracksRef.current = previewTracks;
+  activeDateRef.current = activeDate;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -137,11 +140,12 @@ export default function MapView({ tracks, previewTracks }: Props) {
             "interpolate",
             ["linear"],
             ["zoom"],
-            3, 3.5,
-            7, 4,
-            12, 3.5,
+            3, 2,
+            7, 2.4,
+            12, 2,
           ],
-          "line-opacity": 1,
+          "line-opacity": 0.35,
+          "line-dasharray": [1, 2.2],
         },
       });
 
@@ -160,11 +164,35 @@ export default function MapView({ tracks, previewTracks }: Props) {
             "interpolate",
             ["linear"],
             ["zoom"],
-            3, 3,
-            7, 3.5,
-            12, 3,
+            3, 1.8,
+            7, 2.2,
+            12, 1.8,
           ],
-          "line-dasharray": [1, 1.2],
+          "line-opacity": 0.35,
+          "line-dasharray": [1, 2.2],
+        },
+      });
+
+      map.addSource("highlight", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "highlight-line",
+        type: "line",
+        source: "highlight",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: {
+          "line-color": COLOR_TRACK,
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            3, 4.5,
+            7, 5,
+            12, 4.5,
+          ],
+          "line-opacity": 1,
         },
       });
 
@@ -255,9 +283,45 @@ export default function MapView({ tracks, previewTracks }: Props) {
 
     const tracksSrc = map.getSource("tracks") as maplibregl.GeoJSONSource | undefined;
     tracksSrc?.setData(fc);
+    const isHighlighting = activeDateRef.current !== null;
+    map.setPaintProperty(
+      "tracks-line",
+      "line-width",
+      isHighlighting
+        ? ["interpolate", ["linear"], ["zoom"], 3, 2, 7, 2.4, 12, 2]
+        : ["interpolate", ["linear"], ["zoom"], 3, 3.5, 7, 4, 12, 3.5]
+    );
+    map.setPaintProperty("tracks-line", "line-opacity", isHighlighting ? 0.35 : 1);
+    map.setPaintProperty(
+      "tracks-line",
+      "line-dasharray",
+      isHighlighting ? [1, 2.2] : [1, 0]
+    );
 
     const previewSrc = map.getSource("preview") as maplibregl.GeoJSONSource | undefined;
     previewSrc?.setData(tracksToFC(currentPreviewTracks));
+    map.setPaintProperty(
+      "preview-line",
+      "line-width",
+      isHighlighting
+        ? ["interpolate", ["linear"], ["zoom"], 3, 1.8, 7, 2.2, 12, 1.8]
+        : ["interpolate", ["linear"], ["zoom"], 3, 3, 7, 3.5, 12, 3]
+    );
+    map.setPaintProperty("preview-line", "line-opacity", isHighlighting ? 0.35 : 1);
+    map.setPaintProperty(
+      "preview-line",
+      "line-dasharray",
+      isHighlighting ? [1, 2.2] : [1, 1.2]
+    );
+
+    const activeDate = activeDateRef.current;
+    const highlightTracks = activeDate
+      ? [...currentTracks, ...currentPreviewTracks].filter((track) =>
+          trackDateKeys(track).includes(activeDate)
+        )
+      : [];
+    const highlightSrc = map.getSource("highlight") as maplibregl.GeoJSONSource | undefined;
+    highlightSrc?.setData(tracksToFC(highlightTracks));
 
     const trackBounds = tracksBounds([...currentTracks, ...currentPreviewTracks]);
     const isDesktop =
@@ -289,7 +353,7 @@ export default function MapView({ tracks, previewTracks }: Props) {
 
   useEffect(() => {
     applyData();
-  }, [tracks, previewTracks]);
+  }, [tracks, previewTracks, activeDate]);
 
   return <div ref={containerRef} className="absolute inset-0 bg-black" />;
 }

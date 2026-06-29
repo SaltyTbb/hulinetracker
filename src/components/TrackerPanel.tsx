@@ -1,10 +1,14 @@
-import { TARGET_DISTANCE_KM, TARGET_ELEV_GAIN_M } from "../lib/constants";
-import { TrackStats } from "../lib/gpx";
+import { ParsedTrack, TrackStats, trackDateKeys } from "../lib/gpx";
 
 type Props = {
   stats: TrackStats;
   trackCount: number;
   previewCount: number;
+  tracks: ParsedTrack[];
+  activeDate: string | null;
+  lockedDate: string | null;
+  onHoverDateChange: (date: string | null) => void;
+  onLockedDateToggle: (date: string) => void;
 };
 
 function Stat({
@@ -96,8 +100,157 @@ function Progress({
   );
 }
 
-export default function TrackerPanel({ stats, trackCount, previewCount }: Props) {
-  const days = stats.dateKeys.size;
+function monthKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function dateKey(date: Date) {
+  return `${monthKey(date)}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function monthLabel(date: Date) {
+  return date.toLocaleDateString("zh-CN", { year: "numeric", month: "long" });
+}
+
+function CalendarPanel({
+  tracks,
+  activeDate,
+  lockedDate,
+  onHoverDateChange,
+  onLockedDateToggle,
+}: {
+  tracks: ParsedTrack[];
+  activeDate: string | null;
+  lockedDate: string | null;
+  onHoverDateChange: (date: string | null) => void;
+  onLockedDateToggle: (date: string) => void;
+}) {
+  const trackCountByDate = new Map<string, number>();
+  for (const track of tracks) {
+    for (const key of trackDateKeys(track)) {
+      trackCountByDate.set(key, (trackCountByDate.get(key) ?? 0) + 1);
+    }
+  }
+
+  const sortedDates = [...trackCountByDate.keys()].sort();
+  if (sortedDates.length === 0) return null;
+
+  const firstDate = new Date(`${sortedDates[0]}T00:00:00`);
+  const lastDate = new Date(`${sortedDates[sortedDates.length - 1]}T00:00:00`);
+  const months: Date[] = [];
+  const cursor = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+  const end = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
+
+  while (cursor <= end) {
+    months.push(new Date(cursor));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  return (
+    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <div>
+          <div className="text-[11px] text-neutral-400 leading-tight">
+            三个月日历
+          </div>
+          <div className="text-[9px] uppercase tracking-wider text-neutral-600 leading-tight mt-0.5">
+            Hover to preview · click to lock
+          </div>
+        </div>
+        <div className="text-[10px] text-neutral-500 tabular-nums">
+          {sortedDates.length} dates
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3">
+        {months.map((month) => {
+          const daysInMonth = new Date(
+            month.getFullYear(),
+            month.getMonth() + 1,
+            0
+          ).getDate();
+          const leading = new Date(
+            month.getFullYear(),
+            month.getMonth(),
+            1
+          ).getDay();
+
+          return (
+            <div key={monthKey(month)}>
+              <div className="mb-1.5 text-[10px] text-neutral-300 font-semibold">
+                {monthLabel(month)}
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center text-[9px] text-neutral-600">
+                {["日", "一", "二", "三", "四", "五", "六"].map((day) => (
+                  <div key={day}>{day}</div>
+                ))}
+              </div>
+              <div className="mt-1 grid grid-cols-7 gap-1">
+                {Array.from({ length: leading }).map((_, index) => (
+                  <div key={`blank-${index}`} className="aspect-square" />
+                ))}
+                {Array.from({ length: daysInMonth }).map((_, index) => {
+                  const day = index + 1;
+                  const key = dateKey(
+                    new Date(month.getFullYear(), month.getMonth(), day)
+                  );
+                  const count = trackCountByDate.get(key) ?? 0;
+                  const hasTrack = count > 0;
+                  const isActive = activeDate === key;
+                  const isLocked = lockedDate === key;
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={[
+                        "aspect-square rounded-md text-[10px] tabular-nums transition",
+                        hasTrack
+                          ? "bg-brand-yellow/15 text-brand-yellow border border-brand-yellow/30 hover:bg-brand-yellow hover:text-black"
+                          : "bg-black/30 text-neutral-700 border border-neutral-800",
+                        isActive
+                          ? "ring-2 ring-brand-yellow bg-brand-yellow text-black"
+                          : "",
+                        isLocked ? "border-brand-yellow shadow-[0_0_0_1px_#facc15]" : "",
+                      ].join(" ")}
+                      title={
+                        hasTrack
+                          ? `${key} · ${count} track${count > 1 ? "s" : ""}${
+                              isLocked ? " · locked" : ""
+                            }`
+                          : key
+                      }
+                      aria-pressed={isLocked}
+                      onClick={() => hasTrack && onLockedDateToggle(key)}
+                      onMouseEnter={() => hasTrack && onHoverDateChange(key)}
+                      onMouseLeave={() => hasTrack && onHoverDateChange(null)}
+                      onFocus={() => hasTrack && onHoverDateChange(key)}
+                      onBlur={() => hasTrack && onHoverDateChange(null)}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default function TrackerPanel({
+  stats,
+  trackCount,
+  previewCount,
+  tracks,
+  activeDate,
+  lockedDate,
+  onHoverDateChange,
+  onLockedDateToggle,
+}: Props) {
+  const days = stats.trackDays;
   const avgDistanceKm = days > 0 ? stats.distanceKm / days : 0;
   const avgElevM = days > 0 ? stats.elevGainM / days : 0;
 
@@ -145,7 +298,7 @@ export default function TrackerPanel({ stats, trackCount, previewCount }: Props)
         labelZh="距离进度"
         labelEn="Distance progress"
         current={stats.distanceKm}
-        target={TARGET_DISTANCE_KM}
+        target={stats.distanceKm}
         unit="km"
         format={(n) => n.toFixed(1)}
         remainingLabel={{ zh: "剩", en: "left" }}
@@ -154,10 +307,17 @@ export default function TrackerPanel({ stats, trackCount, previewCount }: Props)
         labelZh="爬升进度"
         labelEn="Climb progress"
         current={stats.elevGainM}
-        target={TARGET_ELEV_GAIN_M}
+        target={stats.elevGainM}
         unit="m"
         format={(n) => Math.round(n).toLocaleString()}
         remainingLabel={{ zh: "剩", en: "left" }}
+      />
+      <CalendarPanel
+        tracks={tracks}
+        activeDate={activeDate}
+        lockedDate={lockedDate}
+        onHoverDateChange={onHoverDateChange}
+        onLockedDateToggle={onLockedDateToggle}
       />
     </div>
   );
