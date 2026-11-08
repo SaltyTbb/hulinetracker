@@ -12,7 +12,7 @@
 - 距离进度（目标 5700 km）
 - 爬升进度（目标 45000 m）
 
-主题：黑 / 灰 / 黄。底图：CARTO Dark Matter。
+主题：黑 / 灰 / 黄。底图：OpenFreeMap Dark（免 API key）。
 
 ---
 

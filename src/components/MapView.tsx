@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import maplibregl, { Map as MLMap, StyleSpecification } from "maplibre-gl";
+import maplibregl, { Map as MLMap } from "maplibre-gl";
 import type { FeatureCollection, MultiLineString } from "geojson";
 import {
   COLOR_DASH,
@@ -16,27 +16,9 @@ type Props = {
   activeDate: string | null;
 };
 
-const DARK_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {
-    "carto-dark": {
-      type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-        "https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-      ],
-      tileSize: 256,
-      attribution:
-        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-    },
-  },
-  layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#000" } },
-    { id: "carto", type: "raster", source: "carto-dark" },
-  ],
-};
+// CARTO Dark Matter now watermarks every tile with "API KEY REQUIRED".
+// OpenFreeMap's dark style is keyless and stays in the same black/gray range.
+const DARK_STYLE = "https://tiles.openfreemap.org/styles/dark";
 
 function tracksToFC(tracks: ParsedTrack[]): FeatureCollection<MultiLineString> {
   return {
